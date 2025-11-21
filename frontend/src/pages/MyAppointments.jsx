@@ -1,0 +1,195 @@
+import React, { useContext, useState, useEffect } from "react";
+import { AppContext } from "../context/AppContext";
+import { toast } from "react-hot-toast";
+import axios from "axios";
+
+const MyAppointments = () => {
+  const { backendUrl, token, getDoctorsData } = useContext(AppContext);
+  const [appointments, setAppointments] = useState([]);
+
+  const months = [
+    "",
+    "Jan",
+    "Feb",
+    "mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const slotDateFormat = (slotDate) => {
+    const dateArray = slotDate.split("-");
+    return (
+      dateArray[0] + " " + months[Number(dateArray[1])] + " " + dateArray[2]
+    );
+  };
+
+  const getUserAppointments = async () => {
+    try {
+      const { data } = await axios.get(backendUrl + "/api/user/appointments", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (data.success) {
+        setAppointments(data.appointments.reverse());
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message);
+    }
+  };
+
+  const cancelAppointment = async (appointmentId) => {
+    try {
+      const { data } = await axios.post(
+        backendUrl + "/api/user/cancel-appointment",
+        { appointmentId },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (data.success) {
+        toast.success(data.message);
+        getUserAppointments();
+        getDoctorsData();
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message);
+    }
+  };
+
+  // HANDLE PAYSTACK PAYMENT
+  const handlePay = async (appointment) => {
+    try {
+      const { data } = await axios.post(
+        backendUrl + "/api/user/initiate-payment",
+        {
+          appointmentId: appointment._id,
+          amount: appointment.amount,
+          email: appointment.userData.email, // Paystack requires email
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (data.success) {
+        window.location.href = data.authorization_url;
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error("Payment initialization failed");
+    }
+  };
+
+  useEffect(() => {
+    if (token) {
+      getUserAppointments();
+      getDoctorsData();
+    }
+  }, [token]);
+
+  return (
+    <div className="p-4">
+      <p className="text-xl font-semibold mb-4">My Appointments</p>
+
+      <div>
+        {appointments.length === 0 && (
+          <p className="text-gray-500 mt-4">No appointments found.</p>
+        )}
+
+        {appointments.map((item, index) => (
+          <div
+            className="grid grid-cols-[1fr_2fr] gap-4 sm:flex sm:gap-6 py-4 border-b"
+            key={index}
+          >
+            {/* Doctor Image */}
+            <div>
+              <img
+                className="w-32 h-32 object-cover bg-indigo-50 rounded"
+                src={item.docData?.image}
+                alt=""
+              />
+            </div>
+
+            {/* Doctor Details */}
+            <div className="flex-1 text-sm text-zinc-600">
+              <p className="text-neutral-800 font-semibold text-lg">
+                {item.docData?.name}
+              </p>
+
+              <p className="capitalize">{item.docData?.speciality}</p>
+
+              <p className="text-zinc-700 font-medium mt-2">Address:</p>
+              <p className="text-sm">{item.docData?.address?.line1}</p>
+              <p className="text-sm">{item.docData?.address?.line2}</p>
+
+              <p className="text-sm mt-2">
+                <span className="font-medium text-neutral-700">
+                  Date & Time:
+                </span>
+                {slotDateFormat(item.slotDate)} | {item.slotTime}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-2 justify-end">
+              {/* PAY BUTTON — only when NOT paid and NOT cancelled */}
+              {!item.cancelled && !item.payment && !item.isCompleted && (
+                <button
+                  onClick={() => handlePay(item)}
+                  className="text-sm text-stone-500 text-center sm:min-w-40 py-2 border rounded hover:bg-primary hover:text-white transition-all duration-300"
+                >
+                  Pay Online
+                </button>
+              )}
+
+              {/* CANCEL BUTTON — show when NOT cancelled (payment doesn't matter) */}
+              {!item.cancelled && !item.isCompleted && (
+                <button
+                  onClick={() => cancelAppointment(item._id)}
+                  className="text-sm text-stone-500 text-center sm:min-w-40 py-2 border rounded hover:bg-red-600 hover:text-white transition-all duration-300"
+                >
+                  Cancel Appointment
+                </button>
+              )}
+
+              {/* CANCELLED BADGE */}
+              {item.cancelled && !item.isCompleted && (
+                <button className="sm:min-w-48 py-2 border border-red-500 rounded text-red-500">
+                  Appointment cancelled
+                </button>
+              )}
+
+              {/* PAID BADGE — ONLY show Paid when payment = true */}
+              {item.payment && !item.cancelled && (
+                <button className="sm:min-w-48 py-2 border border-green-500 rounded text-green-500">
+                  Paid
+                </button>
+              )}
+              {item.isCompleted && (
+                <button className="sm:min-w-48 py-2 border border-green-500 rounded text-green-500">
+                  Completed
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default MyAppointments;
