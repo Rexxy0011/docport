@@ -65,7 +65,7 @@ const DoctorAppointment = () => {
 
             <p>
               {currency}
-              {item.amount}
+              {Number(item.amount).toLocaleString()}
             </p>
 
             {item.cancelled ? (

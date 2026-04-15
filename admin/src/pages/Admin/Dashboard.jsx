@@ -36,7 +36,7 @@ const Dashboard = () => {
           />
           <div className="text-center sm:text-left">
             <p className="text-lg sm:text-xl font-semibold text-gray-600">
-              {dashData.doctors}
+              {Number(dashData.doctors).toLocaleString()}
             </p>
             <p className="text-gray-400 text-sm">Doctors</p>
           </div>
@@ -59,7 +59,7 @@ const Dashboard = () => {
           />
           <div className="text-center sm:text-left">
             <p className="text-lg sm:text-xl font-semibold text-gray-600">
-              {dashData.appointment}
+              {Number(dashData.appointment).toLocaleString()}
             </p>
             <p className="text-gray-400 text-sm">Appointments</p>
           </div>
@@ -82,7 +82,7 @@ const Dashboard = () => {
           />
           <div className="text-center sm:text-left">
             <p className="text-lg sm:text-xl font-semibold text-gray-600">
-              {dashData.patients}
+              {Number(dashData.patients).toLocaleString()}
             </p>
             <p className="text-gray-400 text-sm">Patients</p>
           </div>

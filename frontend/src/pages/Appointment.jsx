@@ -163,7 +163,7 @@ const Appointment = () => {
               Appointment fee:{" "}
               <span className="text-gray-600">
                 {currencySymbol}
-                {docInfo.fees}
+                {Number(docInfo.fees).toLocaleString()}
               </span>
             </p>
           </div>

@@ -56,7 +56,7 @@ const AllApointments = () => {
             </div>
             <p>
               {currency}
-              {item.amount}
+              {Number(item.amount).toLocaleString()}
             </p>
             {item.cancelled ? (
               <p className="text-red-400 text-xs font-medium">Cancelled</p>

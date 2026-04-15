@@ -86,7 +86,7 @@ const DoctorProfile = () => {
                 className="border px-2 py-1 rounded ml-2 w-24"
               />
             ) : (
-              profileData.fees
+              Number(profileData.fees).toLocaleString()
             )}
           </span>
         </p>
