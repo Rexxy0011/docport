@@ -1,11 +1,11 @@
 import React, { useState, useContext, useEffect } from "react";
 import { AppContext } from "../context/AppContext";
-import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import apiClient, { apiErrorMessage } from "../utils/apiClient";
 
 const Login = () => {
-  const { backendUrl, token, setToken } = useContext(AppContext);
+  const { token, setToken } = useContext(AppContext);
   const navigate = useNavigate();
 
   const [state, setState] = useState("Sign Up");
@@ -17,34 +17,20 @@ const Login = () => {
     event.preventDefault();
 
     try {
-      if (state === "Sign Up") {
-        const { data } = await axios.post(backendUrl + "/api/user/register", {
-          name,
-          password,
-          email,
-        });
+      const endpoint =
+        state === "Sign Up" ? "/api/user/register" : "/api/user/login";
+      const payload =
+        state === "Sign Up" ? { name, password, email } : { email, password };
 
-        if (data.success) {
-          localStorage.setItem("token", data.token);
-          setToken(data.token);
-        } else {
-          toast.error(data.message);
-        }
+      const { data } = await apiClient.post(endpoint, payload);
+
+      if (data.success) {
+        setToken(data.token);
       } else {
-        const { data } = await axios.post(backendUrl + "/api/user/login", {
-          email,
-          password,
-        });
-
-        if (data.success) {
-          localStorage.setItem("token", data.token);
-          setToken(data.token);
-        } else {
-          toast.error(data.message);
-        }
+        toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(apiErrorMessage(error));
     }
   };
 
@@ -96,6 +82,7 @@ const Login = () => {
             onChange={(e) => setPassword(e.target.value)}
             value={password}
             required
+            minLength={8}
           />
         </div>
 

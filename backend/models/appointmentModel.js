@@ -13,6 +13,12 @@ const appointmentSchema = new mongoose.Schema(
     cancelled: { type: Boolean, default: false },
     payment: { type: Boolean, default: false },
     isCompleted: { type: Boolean, default: false },
+    paymentMethod: {
+      type: String,
+      enum: ["online", "cash"],
+      default: "cash",
+    },
+    paymentExpiresAt: { type: Date },
   },
   { timestamps: true }
 );

@@ -6,7 +6,9 @@ import jwt from "jsonwebtoken";
 import appointmentModel from "../models/appointmentModel.js";
 import userModel from "../models/userModel.js";
 
-// API FOR ADDING DOCTOR
+const TOKEN_TTL = "7d";
+const GENERIC_ERROR = "Something went wrong";
+
 const addDoctor = async (req, res) => {
   try {
     const {
@@ -31,23 +33,32 @@ const addDoctor = async (req, res) => {
       !experience ||
       !about ||
       !fees ||
-      !address
+      !address ||
+      !imageFile
     ) {
-      return res.json({ success: false, message: "Missing Details" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing details" });
     }
 
     if (!validator.isEmail(email)) {
-      return res.json({
-        success: false,
-        message: "please enter a valid email",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Please enter a valid email" });
+    }
+    if (password.length < 8) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Please enter a strong password" });
     }
 
-    if (password.length < 8) {
-      return res.json({
-        success: false,
-        message: "please enter a strong password",
-      });
+    let parsedAddress;
+    try {
+      parsedAddress = typeof address === "string" ? JSON.parse(address) : address;
+    } catch {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid address format" });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -56,53 +67,50 @@ const addDoctor = async (req, res) => {
     const imageUpload = await cloudinary.uploader.upload(imageFile.path, {
       resource_type: "image",
     });
-    const imageUrl = imageUpload.secure_url;
 
-    const doctorData = {
+    await doctorModel.create({
       name,
       email,
-      image: imageUrl,
+      image: imageUpload.secure_url,
       password: hashedPassword,
       speciality,
       degree,
       experience,
       about,
       fees,
-      address: JSON.parse(address),
+      address: parsedAddress,
       date: Date.now(),
-    };
-
-    const newDoctor = new doctorModel(doctorData);
-    await newDoctor.save();
+    });
 
     res.json({ success: true, message: "Doctor Added" });
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: GENERIC_ERROR });
   }
 };
 
-// API FOR THE ADMIN LOGIN
 const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (
-      email === process.env.ADMIN_EMAIL &&
-      password === process.env.ADMIN_PASSWORD
+      email !== process.env.ADMIN_EMAIL ||
+      password !== process.env.ADMIN_PASSWORD
     ) {
-      const token = jwt.sign(email + password, process.env.JWT_SECRET);
-      res.json({ success: true, token });
-    } else {
-      res.json({ success: false, message: "invalid credentials" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
     }
+
+    const token = jwt.sign({ role: "admin" }, process.env.JWT_SECRET, {
+      expiresIn: TOKEN_TTL,
+    });
+    res.json({ success: true, token });
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: GENERIC_ERROR });
   }
 };
-
-// API to get all doctors list for admin panel
 
 const allDoctors = async (req, res) => {
   try {
@@ -110,86 +118,76 @@ const allDoctors = async (req, res) => {
     res.json({ success: true, doctors });
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: GENERIC_ERROR });
   }
 };
-// Api to get all appointments list
 
 const AppointmentsAdmin = async (req, res) => {
   try {
     const appointments = await appointmentModel.find({});
     res.json({ success: true, appointments });
-  } catch {
+  } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: GENERIC_ERROR });
   }
 };
 
-// Api to cancel appointment by admin
 const appointmentCancel = async (req, res) => {
   try {
     const { appointmentId } = req.body;
 
     const appointmentData = await appointmentModel.findById(appointmentId);
-
     if (!appointmentData) {
-      return res.json({ success: false, message: "Appointment not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Appointment not found" });
     }
 
-    // mark appointment cancelled
     await appointmentModel.findByIdAndUpdate(appointmentId, {
       cancelled: true,
     });
 
-    // releasing the slot
     const { docId, slotDate, slotTime } = appointmentData;
-    const doctorData = await doctorModel.findById(docId);
-
-    let slots_booked = doctorData.slots_booked || {};
-
-    if (!Array.isArray(slots_booked[slotDate])) {
-      slots_booked[slotDate] = [];
-    }
-
-    slots_booked[slotDate] = slots_booked[slotDate].filter(
-      (e) => e !== slotTime
-    );
-
-    await doctorModel.findByIdAndUpdate(docId, { slots_booked });
+    await doctorModel.findByIdAndUpdate(docId, {
+      $pull: { [`slots_booked.${slotDate}`]: slotTime },
+    });
 
     res.json({ success: true, message: "Appointment Cancelled" });
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: GENERIC_ERROR });
   }
 };
 
-// Api to get dashboard data for admin
-
-const adminDashborad = async (req, res) => {
+const adminDashboard = async (req, res) => {
   try {
-    const doctors = await doctorModel.find({});
-    const users = await userModel.find({});
-    const appointments = await appointmentModel.find({});
+    const [doctors, users, appointments] = await Promise.all([
+      doctorModel.countDocuments({}),
+      userModel.countDocuments({}),
+      appointmentModel.find({}).sort({ date: -1 }).limit(5),
+    ]);
+
+    const totalAppointments = await appointmentModel.countDocuments({});
 
     const dashData = {
-      doctors: doctors.length,
-      appointment: appointments.length,
-      patients: users.length,
-      latestAppointments: appointments.reverse().slice(0, 5),
+      doctors,
+      appointment: totalAppointments,
+      patients: users,
+      latestAppointments: appointments,
     };
 
     res.json({ success: true, dashData });
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: GENERIC_ERROR });
   }
 };
+
 export {
   addDoctor,
   loginAdmin,
   allDoctors,
   AppointmentsAdmin,
   appointmentCancel,
-  adminDashborad,
+  adminDashboard,
 };

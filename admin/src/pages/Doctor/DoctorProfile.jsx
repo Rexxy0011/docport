@@ -1,11 +1,11 @@
 import React, { useContext, useEffect, useState } from "react";
 import { DoctorContext } from "../../context/DoctorContext";
 import { AppContext } from "../../context/AppContext";
-import axios from "axios";
 import { toast } from "react-hot-toast";
+import { doctorApi, apiErrorMessage } from "../../utils/apiClient";
 
 const DoctorProfile = () => {
-  const { dToken, profileData, getProfileData, setProfileData, backendUrl } =
+  const { dToken, profileData, getProfileData, setProfileData } =
     useContext(DoctorContext);
 
   const { currency } = useContext(AppContext);
@@ -19,12 +19,9 @@ const DoctorProfile = () => {
         fees: profileData.fees,
         available: profileData.available,
       };
-      const { data } = await axios.post(
-        backendUrl + "/api/doctor/update-profile",
-        updateData,
-        {
-          headers: { Authorization: `Bearer ${dToken}` },
-        }
+      const { data } = await doctorApi.post(
+        "/api/doctor/update-profile",
+        updateData
       );
       if (data.success) {
         toast.success(data.message);
@@ -34,8 +31,7 @@ const DoctorProfile = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      console.log(error);
-      toast.error(error.message);
+      toast.error(apiErrorMessage(error));
     }
   };
 
@@ -43,7 +39,7 @@ const DoctorProfile = () => {
     if (dToken) {
       getProfileData();
     }
-  }, [dToken]);
+  }, [dToken, getProfileData]);
 
   return (
     <div className="flex flex-col gap-4 m-5">

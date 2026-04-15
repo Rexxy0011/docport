@@ -1,17 +1,14 @@
-import React, { useState } from "react";
-
-import { useContext } from "react";
+import React, { useState, useContext } from "react";
 import { AppContext } from "../context/AppContext";
 import { assets } from "../assets/assets";
 import { toast } from "react-hot-toast";
-import axios from "axios";
+import apiClient, { apiErrorMessage } from "../utils/apiClient";
 
 const MyProfile = () => {
-  const { userData, setUserData, token, backendUrl, loadUserProfileData } =
-    useContext(AppContext);
+  const { userData, setUserData, loadUserProfileData } = useContext(AppContext);
 
   const [isEdit, setIsEdit] = useState(false);
-  const [image, setImage] = useState(false);
+  const [image, setImage] = useState(null);
 
   const updateUserProfileData = async () => {
     try {
@@ -26,28 +23,21 @@ const MyProfile = () => {
         formData.append("image", image);
       }
 
-      // Send request
-      const { data } = await axios.post(
-        backendUrl + "/api/user/update-profile",
-        formData,
-        {
-          headers: {
-            authorization: `Bearer ${token}`,
-          },
-        }
+      const { data } = await apiClient.post(
+        "/api/user/update-profile",
+        formData
       );
 
       if (data.success) {
         toast.success(data.message);
         await loadUserProfileData();
         setIsEdit(false);
-        setImage(false);
+        setImage(null);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
-      console.log(error);
-      toast.error(error.message);
+      toast.error(apiErrorMessage(error));
     }
   };
 
@@ -60,7 +50,7 @@ const MyProfile = () => {
               <img
                 className="w-36 rounded opacity-75"
                 src={image ? URL.createObjectURL(image) : userData.image}
-                alt=""
+                alt="profile"
               />
               <img
                 className="w-10 absolute bottom-12 right-12"
@@ -72,11 +62,12 @@ const MyProfile = () => {
               onChange={(e) => setImage(e.target.files[0])}
               type="file"
               id="image"
+              accept="image/*"
               hidden
             />
           </label>
         ) : (
-          <img className="w-36 rounded" src={userData.image} alt="" />
+          <img className="w-36 rounded" src={userData.image} alt="profile" />
         )}
         {isEdit ? (
           <input
@@ -122,7 +113,7 @@ const MyProfile = () => {
                       address: { ...prev.address, line1: e.target.value },
                     }))
                   }
-                  value={userData.address.line1}
+                  value={userData.address?.line1 || ""}
                   type="text"
                 />
                 <br />
@@ -134,15 +125,15 @@ const MyProfile = () => {
                       address: { ...prev.address, line2: e.target.value },
                     }))
                   }
-                  value={userData.address.line2}
+                  value={userData.address?.line2 || ""}
                   type="text"
                 />
               </p>
             ) : (
               <p className="text-gray-500">
-                {userData.address.line1}
+                {userData.address?.line1}
                 <br />
-                {userData.address.line2}
+                {userData.address?.line2}
               </p>
             )}
           </div>

@@ -1,9 +1,9 @@
 import React, { useContext, useState } from "react";
 import { AdminContext } from "../context/AdminContext";
-import axios from "axios";
 import { toast } from "react-hot-toast";
 import { DoctorContext } from "../context/DoctorContext";
 import { useNavigate } from "react-router-dom";
+import { adminApi, doctorApi, apiErrorMessage } from "../utils/apiClient";
 
 const Login = () => {
   const [state, setState] = useState("Admin");
@@ -13,46 +13,42 @@ const Login = () => {
   const navigate = useNavigate();
 
   const { setDToken } = useContext(DoctorContext);
-  const { setAToken, backendUrl } = useContext(AdminContext);
+  const { setAToken } = useContext(AdminContext);
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
 
     try {
       if (state === "Admin") {
-        const { data } = await axios.post(backendUrl + "/api/admin/login", {
+        const { data } = await adminApi.post("/api/admin/login", {
           email,
           password,
         });
-
         if (data.success) {
-          localStorage.setItem("aToken", data.token);
           setAToken(data.token);
-          navigate("/admin-dashboard"); // ✅ redirect admin
+          navigate("/admin-dashboard");
         } else {
           toast.error(data.message);
         }
       } else {
-        const { data } = await axios.post(backendUrl + "/api/doctor/login", {
+        const { data } = await doctorApi.post("/api/doctor/login", {
           email,
           password,
         });
         if (data.success) {
-          localStorage.setItem("dToken", data.token);
           setDToken(data.token);
-          navigate("/doctor-dashboard"); // ✅ redirect doctor
+          navigate("/doctor-dashboard");
         } else {
           toast.error(data.message);
         }
       }
     } catch (error) {
-      console.log(error);
+      toast.error(apiErrorMessage(error));
     }
   };
 
   return (
     <form onSubmit={onSubmitHandler} className="min-h-[80vh] flex items-center">
-      {/* your UI stays exactly the same */}
       <div className="flex flex-col gap-3 m-auto items-start p-8 min-w-[340px] sm:min-w-96 border rounded-xl text-[#5E5E5E] text-sm shadow-lg">
         <p className="text-2xl font-semibold m-auto">
           <span className="text-primary">{state}</span> Login
@@ -80,7 +76,7 @@ const Login = () => {
           />
         </div>
 
-        <button className="bg-primary text-white w-full py-2 rounded-md text base">
+        <button className="bg-primary text-white w-full py-2 rounded-md text-base">
           Login
         </button>
 

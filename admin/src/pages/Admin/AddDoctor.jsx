@@ -1,8 +1,7 @@
-import React, { useContext, useState } from "react";
+import React, { useState } from "react";
 import { assets } from "../../assets/assets";
-import { AdminContext } from "../../context/AdminContext";
 import { toast } from "react-hot-toast";
-import axios from "axios";
+import { adminApi, apiErrorMessage } from "../../utils/apiClient";
 
 const AddDoctor = () => {
   const [docImg, setDocImg] = useState(false);
@@ -17,8 +16,6 @@ const AddDoctor = () => {
   const [address1, setAddress1] = useState("");
   const [address2, setAddress2] = useState("");
   const [degree, setDegree] = useState("");
-
-  const { backendUrl, aToken } = useContext(AdminContext);
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
@@ -44,10 +41,9 @@ const AddDoctor = () => {
         JSON.stringify({ line1: address1, line2: address2 })
       );
 
-      const { data } = await axios.post(
-        backendUrl + "/api/admin/add-doctor",
-        formData,
-        { headers: { Authorization: `Bearer ${aToken}` } }
+      const { data } = await adminApi.post(
+        "/api/admin/add-doctor",
+        formData
       );
 
       if (data.success) {
@@ -65,8 +61,7 @@ const AddDoctor = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
-      console.log(error);
+      toast.error(apiErrorMessage(error));
     }
   };
 

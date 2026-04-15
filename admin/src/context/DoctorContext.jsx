@@ -1,121 +1,118 @@
-import { useState } from "react";
-import { createContext } from "react";
-import axios from "axios";
+import { createContext, useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import {
+  doctorApi,
+  apiErrorMessage,
+  setUnauthorizedHandler,
+} from "../utils/apiClient";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const DoctorContext = createContext();
 
 const DoctorContextProvider = (props) => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-  const [dToken, setDToken] = useState(localStorage.getItem("dToken") || "");
-
+  const [dToken, setDTokenState] = useState(
+    () => localStorage.getItem("dToken") || ""
+  );
   const [appointments, setAppointments] = useState([]);
-
   const [dashData, setDashData] = useState(false);
-
   const [profileData, setProfileData] = useState(false);
 
-  // Fetch doctor appointments
-  const getAppointments = async () => {
-    if (!dToken) return; // prevent unauthorized calls
+  const setDToken = useCallback((next) => {
+    if (next) {
+      localStorage.setItem("dToken", next);
+      setDTokenState(next);
+    } else {
+      localStorage.removeItem("dToken");
+      setDTokenState("");
+    }
+  }, []);
 
+  useEffect(() => {
+    setUnauthorizedHandler("dToken", () => {
+      localStorage.removeItem("dToken");
+      setDTokenState("");
+    });
+  }, []);
+
+  const getAppointments = useCallback(async () => {
+    if (!localStorage.getItem("dToken")) return;
     try {
-      const { data } = await axios.get(
-        backendUrl + "/api/doctor/appointments",
-        {
-          headers: { Authorization: `Bearer ${dToken}` },
-        }
-      );
-
+      const { data } = await doctorApi.get("/api/doctor/appointments");
       if (data.success) {
         setAppointments(data.appointments);
-        console.log(data.appointments);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
-      console.log(error);
-      toast.error(error.message);
+      toast.error(apiErrorMessage(error));
     }
-  };
+  }, []);
 
-  const completeAppointment = async (appointmentId) => {
-    try {
-      const { data } = await axios.post(
-        backendUrl + "/api/doctor/complete-appointment",
-        { appointmentId },
-        {
-          headers: { Authorization: `Bearer ${dToken}` },
+  const completeAppointment = useCallback(
+    async (appointmentId) => {
+      try {
+        const { data } = await doctorApi.post(
+          "/api/doctor/complete-appointment",
+          { appointmentId }
+        );
+        if (data.success) {
+          toast.success(data.message);
+          getAppointments();
+        } else {
+          toast.error(data.message);
         }
-      );
-
-      if (data.success) {
-        toast.success(data.message);
-        getAppointments();
-      } else {
-        toast.error(data.message);
+      } catch (error) {
+        toast.error(apiErrorMessage(error));
       }
-    } catch (error) {
-      console.log(error);
-      toast.error(error.message);
-    }
-  };
-  const cancelAppointment = async (appointmentId) => {
-    try {
-      const { data } = await axios.post(
-        backendUrl + "/api/doctor/cancel-appointment",
-        { appointmentId },
-        {
-          headers: { Authorization: `Bearer ${dToken}` },
+    },
+    [getAppointments]
+  );
+
+  const cancelAppointment = useCallback(
+    async (appointmentId) => {
+      try {
+        const { data } = await doctorApi.post(
+          "/api/doctor/cancel-appointment",
+          { appointmentId }
+        );
+        if (data.success) {
+          toast.success(data.message);
+          getAppointments();
+        } else {
+          toast.error(data.message);
         }
-      );
-
-      if (data.success) {
-        toast.success(data.message);
-        getAppointments();
-      } else {
-        toast.error(data.message);
+      } catch (error) {
+        toast.error(apiErrorMessage(error));
       }
-    } catch (error) {
-      console.log(error);
-      toast.error(error.message);
-    }
-  };
+    },
+    [getAppointments]
+  );
 
-  const getDashData = async () => {
+  const getDashData = useCallback(async () => {
     try {
-      const { data } = await axios.get(backendUrl + "/api/doctor/dashboard", {
-        headers: { Authorization: `Bearer ${dToken}` },
-      });
-
+      const { data } = await doctorApi.get("/api/doctor/dashboard");
       if (data.success) {
         setDashData(data.dashData);
-        console.log(data.dashData);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
-      console.log(error);
-      toast.error(error.message);
+      toast.error(apiErrorMessage(error));
     }
-  };
+  }, []);
 
-  const getProfileData = async () => {
+  const getProfileData = useCallback(async () => {
     try {
-      const { data } = await axios.get(backendUrl + "/api/doctor/profile", {
-        headers: { Authorization: `Bearer ${dToken}` },
-      });
-
+      const { data } = await doctorApi.get("/api/doctor/profile");
       if (data.success) {
         setProfileData(data.profileData);
-        console.log(data.profileData);
       }
     } catch (error) {
-      console.log(error);
-      toast.error(error.message);
+      toast.error(apiErrorMessage(error));
     }
-  };
+  }, []);
 
   const value = {
     backendUrl,

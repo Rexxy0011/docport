@@ -9,16 +9,12 @@ const Doctors = () => {
   const [filterDoc, setFilterDoc] = useState([]);
   const [showFilter, setShowFilter] = useState(false);
 
-  const applyFilter = () => {
+  useEffect(() => {
     if (speciality) {
       setFilterDoc(doctors.filter((doc) => doc.speciality === speciality));
     } else {
       setFilterDoc(doctors);
     }
-  };
-
-  useEffect(() => {
-    applyFilter();
   }, [doctors, speciality]);
 
   return (

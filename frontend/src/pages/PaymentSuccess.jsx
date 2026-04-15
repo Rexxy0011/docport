@@ -1,13 +1,11 @@
 import React, { useEffect, useRef, useContext } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
 import { AppContext } from "../context/AppContext";
 import { toast } from "react-hot-toast";
+import apiClient, { apiErrorMessage } from "../utils/apiClient";
 
 const PaymentSuccess = () => {
-  const { backendUrl, token, getUserAppointments, getDoctorsData } =
-    useContext(AppContext);
-
+  const { getDoctorsData } = useContext(AppContext);
   const [params] = useSearchParams();
   const reference = params.get("reference");
   const navigate = useNavigate();
@@ -20,40 +18,24 @@ const PaymentSuccess = () => {
 
     const verifyPayment = async () => {
       try {
-        const { data } = await axios.post(
-          backendUrl + "/api/user/verify-payment",
-          { reference },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const { data } = await apiClient.post("/api/user/verify-payment", {
+          reference,
+        });
 
         if (data.success) {
           toast.success("Payment Successful!");
-
-          getUserAppointments?.();
           getDoctorsData?.();
-
-          setTimeout(() => {
-            navigate("/my-appointments");
-          }, 800);
+          setTimeout(() => navigate("/my-appointments"), 800);
         } else {
           toast.error(data.message);
         }
       } catch (error) {
-        toast.error(error?.response?.data?.message || error.message);
+        toast.error(apiErrorMessage(error));
       }
     };
 
     verifyPayment();
-  }, [
-    reference,
-    backendUrl,
-    token,
-    navigate,
-    getUserAppointments,
-    getDoctorsData,
-  ]);
+  }, [reference, navigate, getDoctorsData]);
 
   return (
     <div className="p-6 text-center">

@@ -11,7 +11,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (aToken) getDashData();
-  }, [aToken]);
+  }, [aToken, getDashData]);
 
   if (!dashData) return null;
 

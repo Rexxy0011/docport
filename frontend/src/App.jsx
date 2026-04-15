@@ -1,5 +1,5 @@
 import React from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import Home from "./pages/Home";
 import Doctors from "./pages/Doctors";
 import Login from "./pages/Login";
@@ -8,16 +8,16 @@ import Contact from "./pages/Contact";
 import MyProfile from "./pages/MyProfile";
 import MyAppointments from "./pages/MyAppointments";
 import Appointment from "./pages/Appointment";
-import Navbar from "./components /Navbar";
-import Footer from "./components /Footer";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 import { Toaster } from "react-hot-toast";
 
 const App = () => {
   return (
     <div className="max-w-7xl mx-auto px-4">
-      {/* ⭐ React Hot Toast */}
       <Toaster
         position="top-center"
         toastOptions={{
@@ -34,10 +34,38 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
-        <Route path="/my-profile" element={<MyProfile />} />
-        <Route path="/my-appointments" element={<MyAppointments />} />
-        <Route path="/appointment/:docId" element={<Appointment />} />
-        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route
+          path="/my-profile"
+          element={
+            <ProtectedRoute>
+              <MyProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-appointments"
+          element={
+            <ProtectedRoute>
+              <MyAppointments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/appointment/:docId"
+          element={
+            <ProtectedRoute>
+              <Appointment />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/payment-success"
+          element={
+            <ProtectedRoute>
+              <PaymentSuccess />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
       <Footer />
     </div>

@@ -11,8 +11,8 @@ const Navbar = () => {
   const [showDropdown, setShowDropdown] = useState(false);
 
   const logout = () => {
-    setToken(false);
-    localStorage.removeItem("token");
+    navigate("/");
+    setToken(null);
   };
 
   return (
@@ -51,12 +51,14 @@ const Navbar = () => {
 
       <div className="flex items-center gap-4">
         {token && userData ? (
-          <div
-            className="flex items-center gap-2 cursor-pointer group relative"
-            onClick={() => setShowDropdown(!showDropdown)}
-          >
-            <img className="w-8 rounded-full" src={userData.image} alt="" />
-            <img className="w-2.5" src={assets.dropdown_icon} alt="" />
+          <div className="flex items-center gap-2 cursor-pointer group relative">
+            <div
+              className="flex items-center gap-2"
+              onClick={() => setShowDropdown((v) => !v)}
+            >
+              <img className="w-8 rounded-full" src={userData.image} alt="" />
+              <img className="w-2.5" src={assets.dropdown_icon} alt="" />
+            </div>
 
             <div
               className={`absolute top-0 right-0 pt-14 text-base font-medium text-gray-600 z-20
@@ -64,27 +66,30 @@ const Navbar = () => {
             >
               <div className="min-w-48 bg-stone-100 rounded flex flex-col gap-4 p-4 shadow-md">
                 <p
-                  onClick={() => {
-                    navigate("/my-profile");
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setShowDropdown(false);
+                    navigate("/my-profile");
                   }}
                   className="hover:text-black cursor-pointer"
                 >
                   My Profile
                 </p>
                 <p
-                  onClick={() => {
-                    navigate("/my-appointments");
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setShowDropdown(false);
+                    navigate("/my-appointments");
                   }}
                   className="hover:text-black cursor-pointer"
                 >
                   My Appointment
                 </p>
                 <p
-                  onClick={() => {
-                    logout();
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setShowDropdown(false);
+                    logout();
                   }}
                   className="hover:text-black cursor-pointer"
                 >

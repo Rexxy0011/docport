@@ -1,108 +1,118 @@
-import { createContext, useState } from "react";
-import axios from "axios";
+import { createContext, useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import {
+  adminApi,
+  apiErrorMessage,
+  setUnauthorizedHandler,
+} from "../utils/apiClient";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AdminContext = createContext();
 
 const AdminContextProvider = (props) => {
-  const [aToken, setAToken] = useState(
-    localStorage.getItem("aToken") ? localStorage.getItem("aToken") : ""
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+  const [aToken, setATokenState] = useState(
+    () => localStorage.getItem("aToken") || ""
   );
   const [doctors, setDoctors] = useState([]);
   const [appointments, setAppointments] = useState([]);
-
   const [dashData, setDashData] = useState(false);
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const setAToken = useCallback((next) => {
+    if (next) {
+      localStorage.setItem("aToken", next);
+      setATokenState(next);
+    } else {
+      localStorage.removeItem("aToken");
+      setATokenState("");
+    }
+  }, []);
 
-  const getAllDoctors = async () => {
+  useEffect(() => {
+    setUnauthorizedHandler("aToken", () => {
+      localStorage.removeItem("aToken");
+      setATokenState("");
+    });
+  }, []);
+
+  const getAllDoctors = useCallback(async () => {
     try {
-      const { data } = await axios.post(
-        backendUrl + "/api/admin/all-Doctors",
-        {},
-        { headers: { Authorization: `Bearer ${aToken}` } }
-      );
-
+      const { data } = await adminApi.post("/api/admin/all-Doctors", {});
       if (data.success) {
         setDoctors(data.doctors);
-        console.log(data.doctors);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(apiErrorMessage(error));
     }
-  };
+  }, []);
 
-  const changeAvailability = async (docId) => {
-    try {
-      const { data } = await axios.post(
-        backendUrl + "/api/admin/change-availability",
-        { docId },
-        { headers: { Authorization: `Bearer ${aToken}` } }
-      );
-      if (data.success) {
-        toast.success(data.message);
-        getAllDoctors();
-      } else {
-        toast.error(data.message);
+  const changeAvailability = useCallback(
+    async (docId) => {
+      try {
+        const { data } = await adminApi.post(
+          "/api/admin/change-availability",
+          { docId }
+        );
+        if (data.success) {
+          toast.success(data.message);
+          getAllDoctors();
+        } else {
+          toast.error(data.message);
+        }
+      } catch (error) {
+        toast.error(apiErrorMessage(error));
       }
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
+    },
+    [getAllDoctors]
+  );
 
-  const getAllAppointments = async () => {
+  const getAllAppointments = useCallback(async () => {
     try {
-      const { data } = await axios.post(
-        backendUrl + "/api/admin/appointments",
-        {},
-        { headers: { Authorization: `Bearer ${aToken}` } }
-      );
-
+      const { data } = await adminApi.post("/api/admin/appointments", {});
       if (data.success) {
         setAppointments(data.appointments);
-        console.log(data.appointments);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(apiErrorMessage(error));
     }
-  };
+  }, []);
 
-  const cancelAppointment = async (appointmentId) => {
-    try {
-      const { data } = await axios.post(
-        backendUrl + "/api/admin/cancel-appointment",
-        { appointmentId },
-        { headers: { Authorization: `Bearer ${aToken}` } }
-      );
-      if (data.success) {
-        toast.success(data.message);
-        getAllAppointments();
-      } else {
-        toast.error(data.message);
+  const cancelAppointment = useCallback(
+    async (appointmentId) => {
+      try {
+        const { data } = await adminApi.post("/api/admin/cancel-appointment", {
+          appointmentId,
+        });
+        if (data.success) {
+          toast.success(data.message);
+          getAllAppointments();
+        } else {
+          toast.error(data.message);
+        }
+      } catch (error) {
+        toast.error(apiErrorMessage(error));
       }
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
-  const getDashData = async () => {
-    try {
-      const { data } = await axios.get(backendUrl + "/api/admin/dashboard", {
-        headers: { Authorization: `Bearer ${aToken}` },
-      });
+    },
+    [getAllAppointments]
+  );
 
+  const getDashData = useCallback(async () => {
+    try {
+      const { data } = await adminApi.get("/api/admin/dashboard");
       if (data.success) {
         setDashData(data.dashData);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(apiErrorMessage(error));
     }
-  };
+  }, []);
 
   const value = {
     aToken,
